@@ -25,7 +25,10 @@ class ButtonGrid:
                 self._buttons.append(btn)
 
     def set_visible(self, visible: bool):
-        self._grid.set_visibility(visible)
+        if visible:
+            self._grid.classes(remove='hidden')
+        else:
+            self._grid.classes('hidden')
 
     def enable(self):
         for btn in self._buttons:
