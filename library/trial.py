@@ -1,6 +1,6 @@
 import base64
 from nicegui import ui
-from button_grid import ButtonGrid
+from library.button_grid import ButtonGrid
 from settings import TICK_START_MS, TICK_STEP_MS, TICK_MIN_MS
 
 TICK_SOUND = 'resources/tick.wav'
@@ -41,22 +41,14 @@ class Trial:
             if on_complete:
                 on_complete()
 
+        ui.run_javascript(start_tick_js)
+
         with ui.column().classes('mx-auto mt-8 items-center w-fit gap-2'):
             with ui.card().classes('w-full shadow-none border border-gray-300 rounded-xl items-center py-4'):
                 ui.label(target.upper()).classes('text-2xl font-bold tracking-widest')
 
-            grid = ButtonGrid(colors, target=target, cols=cols,
-                              correct_sound='resources/correct.wav',
-                              error_sound='resources/error.wav',
-                              on_error=on_error,
-                              on_complete=complete)
-            grid.disable()
-
-            start_btn = ui.button('Start', color='primary').classes('mt-2 w-full')
-            start_btn.on('click', js_handler=start_tick_js)
-
-            def on_start():
-                grid.enable()
-                start_btn.set_visibility(False)
-
-            start_btn.on('click', on_start)
+            ButtonGrid(colors, target=target, cols=cols,
+                       correct_sound='resources/correct.wav',
+                       error_sound='resources/error.wav',
+                       on_error=on_error,
+                       on_complete=complete)
