@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      display: flex;
+      align-items: flex-start;
+      justify-content: flex-start;
+      background: transparent;
+      overflow: hidden;
+    }
+
+    #btn {
+      cursor: pointer;
+      border: none;
+      outline: none;
+      font-family: sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: 4px;
+    }
+
+    #btn:hover,
+    #btn:active,
+    #btn:focus {
+      background-color: var(--bg-color) !important;
+      color: var(--text-color) !important;
+      outline: none;
+    }
+  </style>
+</head>
+<body>
+  <button id="btn"></button>
+
+  <script>
+    // Inline Streamlit component protocol (replaces streamlit-component-lib.js)
+    const Streamlit = {
+      RENDER_EVENT: "streamlit:render",
+
+      events: new EventTarget(),
+
+      _send(msg) {
+        window.parent.postMessage({ isStreamlitMessage: true, ...msg }, "*");
+      },
+
+      setComponentReady() {
+        this._send({ type: "streamlit:componentReady", apiVersion: 1 });
+      },
+
+      setFrameHeight(height) {
+        this._send({ type: "streamlit:setFrameHeight", height });
+      },
+
+      setComponentValue(value) {
+        this._send({ type: "streamlit:setComponentValue", value, dataType: "json" });
+      },
+    };
+
+    window.addEventListener("message", (event) => {
+      if (event.data.type === "streamlit:render") {
+        Streamlit.events.dispatchEvent(
+          new CustomEvent(Streamlit.RENDER_EVENT, { detail: event.data })
+        );
+      }
+    });
+
+    // Component logic
+    const btn = document.getElementById("btn");
+    let audio = null;
+
+    Streamlit.events.addEventListener(Streamlit.RENDER_EVENT, (event) => {
+      const { label, bg_color, text_color, width, height, sound_b64, sound_ext } = event.detail.args;
+
+      btn.textContent = label || "Click";
+
+      const bgColor = bg_color || "#4CAF50";
+      const txtColor = text_color || "#ffffff";
+      const w = width || 150;
+      const h = height || 50;
+
+      document.documentElement.style.setProperty("--bg-color", bgColor);
+      document.documentElement.style.setProperty("--text-color", txtColor);
+
+      btn.style.backgroundColor = bgColor;
+      btn.style.color = txtColor;
+      btn.style.width = w + "px";
+      btn.style.height = h + "px";
+
+      if (sound_b64 && sound_ext) {
+        const mimeTypes = {
+          mp3: "audio/mpeg",
+          wav: "audio/wav",
+          ogg: "audio/ogg",
+          m4a: "audio/mp4",
+          aac: "audio/aac",
+          flac: "audio/flac",
+        };
+        const mime = mimeTypes[sound_ext.toLowerCase()] || "audio/" + sound_ext.toLowerCase();
+        audio = new Audio("data:" + mime + ";base64," + sound_b64);
+      } else {
+        audio = null;
+      }
+
+      Streamlit.setFrameHeight(h);
+    });
+
+    btn.addEventListener("mousedown", () => {
+      if (audio) {
+        audio.currentTime = 0;
+        audio.play().catch(() => {});
+      }
+    });
+
+    btn.addEventListener("click", () => {
+      Streamlit.setComponentValue(true);
+      setTimeout(() => Streamlit.setComponentValue(false), 100);
+    });
+
+    Streamlit.setComponentReady();
+  </script>
+</body>
+</html>

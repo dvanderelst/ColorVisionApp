@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: transparent;
+      overflow: hidden;
+    }
+
+    #grid {
+      display: grid;
+      gap: 4px;
+    }
+
+    .btn {
+      cursor: pointer;
+      border: none;
+      outline: none;
+      font-family: sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: 6px;
+      box-shadow: 0 3px 0 rgba(0,0,0,0.3);
+    }
+
+    .btn:hover,
+    .btn:active,
+    .btn:focus {
+      outline: none;
+    }
+
+    .btn:active {
+      box-shadow: none;
+      transform: translateY(3px);
+    }
+  </style>
+</head>
+<body>
+  <div id="grid"></div>
+
+  <script>
+    const Streamlit = {
+      RENDER_EVENT: "streamlit:render",
+      events: new EventTarget(),
+
+      _send(msg) {
+        window.parent.postMessage({ isStreamlitMessage: true, ...msg }, "*");
+      },
+      setComponentReady() {
+        this._send({ type: "streamlit:componentReady", apiVersion: 1 });
+      },
+      setFrameHeight(height) {
+        this._send({ type: "streamlit:setFrameHeight", height });
+      },
+      setComponentValue(value) {
+        this._send({ type: "streamlit:setComponentValue", value, dataType: "json" });
+      },
+    };
+
+    window.addEventListener("message", (event) => {
+      if (event.data.type === "streamlit:render") {
+        Streamlit.events.dispatchEvent(
+          new CustomEvent(Streamlit.RENDER_EVENT, { detail: event.data })
+        );
+      }
+    });
+
+    const grid = document.getElementById("grid");
+    let audio = null;
+
+    Streamlit.events.addEventListener(Streamlit.RENDER_EVENT, (event) => {
+      const { colors, cols, btn_width, btn_height, sound_b64, sound_ext } = event.detail.args;
+
+      if (sound_b64 && sound_ext) {
+        const mimeTypes = {
+          mp3: "audio/mpeg", wav: "audio/wav", ogg: "audio/ogg",
+          m4a: "audio/mp4", aac: "audio/aac", flac: "audio/flac",
+        };
+        const mime = mimeTypes[sound_ext.toLowerCase()] || "audio/" + sound_ext.toLowerCase();
+        audio = new Audio("data:" + mime + ";base64," + sound_b64);
+      } else {
+        audio = null;
+      }
+
+      const numCols = cols || 3;
+      const w = btn_width || 150;
+      const h = btn_height || 150;
+      const gap = 4;
+      const rows = Math.ceil(colors.length / numCols);
+      const totalHeight = rows * h + (rows - 1) * gap;
+
+      grid.style.gridTemplateColumns = `repeat(${numCols}, ${w}px)`;
+      grid.style.gridTemplateRows = `repeat(${rows}, ${h}px)`;
+
+      // Rebuild buttons only if the count changed
+      if (grid.children.length !== colors.length) {
+        grid.innerHTML = "";
+        colors.forEach((_, i) => {
+          const btn = document.createElement("button");
+          btn.className = "btn";
+
+          btn.addEventListener("mousedown", () => {
+            if (audio) {
+              audio.currentTime = 0;
+              audio.play().catch(() => {});
+            }
+          });
+
+          btn.addEventListener("click", () => {
+            Streamlit.setComponentValue(i);
+            setTimeout(() => Streamlit.setComponentValue(null), 100);
+          });
+
+          grid.appendChild(btn);
+        });
+      }
+
+      // Update colors
+      Array.from(grid.children).forEach((btn, i) => {
+        const color = colors[i];
+        btn.style.backgroundColor = color;
+        btn.style.setProperty("--btn-color", color);
+      });
+
+      Streamlit.setFrameHeight(totalHeight);
+    });
+
+    Streamlit.setComponentReady();
+  </script>
+</body>
+</html>
