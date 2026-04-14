@@ -6,8 +6,7 @@ from zoneinfo import ZoneInfo
 from nicegui import ui, app
 from library.utils import sample_colors
 from library.round import Round
-from settings import N_ROUNDS, DIFFICULTY
-from env import DASHBOARD_PASSWORD, TIMEZONE
+from settings import N_ROUNDS, DIFFICULTY, TIMEZONE, DASHBOARD_PASSWORD
 import db
 
 app.on_startup(db.setup)

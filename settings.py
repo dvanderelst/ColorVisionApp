@@ -8,7 +8,9 @@ DIFFICULTY = {
     'hard':   {'tick_start_ms': 600,  'tick_min_ms': 300,  'multiplier': 2.0},
 }
 
-N_ROUNDS = 10
+N_ROUNDS           = 10
+TIMEZONE           = 'America/New_York'
+DASHBOARD_PASSWORD = 'bme26'
 
 ROUND_SCORE_START   = 100
 SCORE_PENALTY_TICK  = 5
