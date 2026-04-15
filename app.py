@@ -7,10 +7,12 @@ from zoneinfo import ZoneInfo
 from nicegui import ui, app
 from library.utils import sample_colors
 from library.round import Round
+from library.colors import colors as COLOR_HEX
 from settings import N_ROUNDS, DIFFICULTY, TIMEZONE, DASHBOARD_PASSWORD
 import db
 
 app.on_startup(db.setup)
+app.add_static_files('/resources', 'resources')
 
 ui.add_css('''
     body, .q-page { background-color: black !important; }
@@ -45,10 +47,15 @@ def landing():
                 ['Easy', 'Medium', 'Hard'], value='Easy',
             ).props('inline dark')
 
-        ui.button(
-            'START',
-            on_click=lambda: ui.navigate.to(f'/game/{difficulty.value.lower()}'),
-        ).classes('self-center text-lg font-bold px-10 py-3 mt-2').props('flat color=red')
+        with ui.row().classes('self-center gap-4 mt-2'):
+            ui.button(
+                'START',
+                on_click=lambda: ui.navigate.to(f'/game/{difficulty.value.lower()}'),
+            ).classes('text-lg font-bold px-10 py-3').props('flat color=red')
+            ui.button(
+                'TRAIN',
+                on_click=lambda: ui.navigate.to('/train'),
+            ).classes('text-lg font-bold px-10 py-3').props('flat color=white')
 
         ui.link('Instructor Dashboard', '/dashboard').classes('self-center text-gray-500 text-xs mt-4')
 
@@ -189,6 +196,83 @@ def dashboard():
         await refresh()
 
     show_login()
+
+
+# Maps each goggle color to its image filename (green/blue have a double extension from upload)
+GOGGLE_IMAGES = {
+    'red':   '/resources/red_goggles.png',
+    'green': '/resources/green_goggles.png.png',
+    'blue':  '/resources/blue_goggles.png.png',
+}
+
+
+def _seen_through_goggle(hex_color: str, goggle: str) -> str:
+    """Return the hex color as perceived through a single-channel goggle."""
+    r = int(hex_color[1:3], 16)
+    g = int(hex_color[3:5], 16)
+    b = int(hex_color[5:7], 16)
+    if goggle == 'red':
+        return f'#{r:02x}0000'
+    elif goggle == 'green':
+        return f'#00{g:02x}00'
+    else:
+        return f'#0000{b:02x}'
+
+
+@ui.page('/train')
+def train():
+    refs = {'preview': None, 'seen_boxes': []}
+
+    with ui.column().classes('mx-auto mt-12 items-center gap-6 w-full max-w-3xl px-8'):
+        ui.label('Color Trainer').classes('text-white text-2xl font-bold')
+
+        ui.label(
+            'Select a color below. The top box shows that color. '
+            'The bottom row shows how the color appears through each pair of goggles.'
+        ).classes('text-gray-300 text-sm text-center max-w-xl')
+
+        ui.select(
+            options={c: c.upper() for c in COLORS}, value='red', on_change=lambda e: update(e),
+        ).props('dark outlined').classes('w-64 text-xl')
+
+        # Large color preview box
+        refs['preview'] = ui.element('div').style(
+            f'background-color: {COLOR_HEX["red"]}; '
+            'width: 100%; height: 100px; border-radius: 12px; '
+            'display: flex; align-items: center; justify-content: center;'
+        )
+        with refs['preview']:
+            refs['label'] = ui.label('RED').classes('text-4xl font-bold').style('color: black;')
+
+        # Goggle simulator
+        ui.label('Goggle Simulator').classes('text-white text-lg mt-4')
+
+        with ui.row().classes('gap-8 mt-2 justify-center'):
+            for goggle in ('red', 'green', 'blue'):
+                with ui.column().classes('items-center gap-3'):
+                    ui.image(GOGGLE_IMAGES[goggle]).classes('w-48')
+                    seen_box = ui.element('div').style(
+                        f'background-color: {_seen_through_goggle(COLOR_HEX["red"], goggle)}; '
+                        'width: 192px; height: 80px; border-radius: 8px;'
+                    )
+                    refs['seen_boxes'].append(seen_box)
+
+        def update(e):
+            color = e.value
+            hex_color = COLOR_HEX[color]
+            refs['preview'].style(
+                f'background-color: {hex_color}; '
+                'width: 100%; height: 100px; border-radius: 12px; '
+                'display: flex; align-items: center; justify-content: center;'
+            )
+            refs['label'].text = color.upper()
+            for goggle, box in zip(('red', 'green', 'blue'), refs['seen_boxes']):
+                box.style(
+                    f'background-color: {_seen_through_goggle(hex_color, goggle)}; '
+                    'width: 192px; height: 80px; border-radius: 8px;'
+                )
+
+        ui.button('Back', on_click=lambda: ui.navigate.to('/')).props('flat color=white').classes('mt-4')
 
 
 ui.run(
