@@ -1,4 +1,5 @@
 import asyncio
+import os
 import random
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -190,7 +191,6 @@ def dashboard():
     show_login()
 
 
-import os
 ui.run(
     host='0.0.0.0',
     port=int(os.environ.get('PORT', 8080)),
