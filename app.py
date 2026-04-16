@@ -21,6 +21,25 @@ ui.add_css('''
 
 COLORS = ['red', 'green', 'blue', 'yellow', 'magenta', 'cyan']
 
+GOGGLE_IMAGES = {
+    'red':   '/resources/red_goggles.png',
+    'green': '/resources/green_goggles.png',
+    'blue':  '/resources/blue_goggles.png',
+}
+
+
+def _seen_through_goggle(hex_color: str, goggle: str) -> str:
+    """Return the hex color as perceived through a single-channel goggle."""
+    r = int(hex_color[1:3], 16)
+    g = int(hex_color[3:5], 16)
+    b = int(hex_color[5:7], 16)
+    if goggle == 'red':
+        return f'#{r:02x}0000'
+    elif goggle == 'green':
+        return f'#00{g:02x}00'
+    else:
+        return f'#0000{b:02x}'
+
 
 @ui.page('/')
 def landing():
@@ -198,30 +217,24 @@ def dashboard():
     show_login()
 
 
-# Maps each goggle color to its image filename (green/blue have a double extension from upload)
-GOGGLE_IMAGES = {
-    'red':   '/resources/red_goggles.png',
-    'green': '/resources/green_goggles.png.png',
-    'blue':  '/resources/blue_goggles.png.png',
-}
-
-
-def _seen_through_goggle(hex_color: str, goggle: str) -> str:
-    """Return the hex color as perceived through a single-channel goggle."""
-    r = int(hex_color[1:3], 16)
-    g = int(hex_color[3:5], 16)
-    b = int(hex_color[5:7], 16)
-    if goggle == 'red':
-        return f'#{r:02x}0000'
-    elif goggle == 'green':
-        return f'#00{g:02x}00'
-    else:
-        return f'#0000{b:02x}'
-
-
 @ui.page('/train')
 def train():
-    refs = {'preview': None, 'seen_boxes': []}
+    refs = {'seen_boxes': []}
+
+    def update(e):
+        color = e.value
+        hex_color = COLOR_HEX[color]
+        refs['preview'].style(
+            f'background-color: {hex_color}; '
+            'width: 100%; height: 100px; border-radius: 12px; '
+            'display: flex; align-items: center; justify-content: center;'
+        )
+        refs['label'].text = color.upper()
+        for goggle, box in zip(('red', 'green', 'blue'), refs['seen_boxes']):
+            box.style(
+                f'background-color: {_seen_through_goggle(hex_color, goggle)}; '
+                'width: 192px; height: 80px; border-radius: 8px;'
+            )
 
     with ui.column().classes('mx-auto mt-12 items-center gap-6 w-full max-w-3xl px-8'):
         ui.label('Color Trainer').classes('text-white text-2xl font-bold')
@@ -232,7 +245,7 @@ def train():
         ).classes('text-gray-300 text-sm text-center max-w-xl')
 
         ui.select(
-            options={c: c.upper() for c in COLORS}, value='red', on_change=lambda e: update(e),
+            options={c: c.upper() for c in COLORS}, value='red', on_change=update,
         ).props('dark outlined').classes('w-64 text-xl')
 
         # Large color preview box
@@ -256,21 +269,6 @@ def train():
                         'width: 192px; height: 80px; border-radius: 8px;'
                     )
                     refs['seen_boxes'].append(seen_box)
-
-        def update(e):
-            color = e.value
-            hex_color = COLOR_HEX[color]
-            refs['preview'].style(
-                f'background-color: {hex_color}; '
-                'width: 100%; height: 100px; border-radius: 12px; '
-                'display: flex; align-items: center; justify-content: center;'
-            )
-            refs['label'].text = color.upper()
-            for goggle, box in zip(('red', 'green', 'blue'), refs['seen_boxes']):
-                box.style(
-                    f'background-color: {_seen_through_goggle(hex_color, goggle)}; '
-                    'width: 192px; height: 80px; border-radius: 8px;'
-                )
 
         ui.button('Back', on_click=lambda: ui.navigate.to('/')).props('flat color=white').classes('mt-4')
 

@@ -16,10 +16,6 @@ def _setup():
                     submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                 )
             """)
-            cur.execute("""
-                ALTER TABLE scores
-                ADD COLUMN IF NOT EXISTS difficulty TEXT NOT NULL DEFAULT 'medium'
-            """)
         conn.commit()
 
 
