@@ -7,7 +7,11 @@ class ToggleButton(ui.button):
     def __init__(self, *args, color, sound_path=None, on_click=None, **kwargs):
         super().__init__(*args, **kwargs)
         color_code = colors[color]
-        self.style(f'background-color: {color_code} !important; width: 150px; height: 150px;')
+        self.style(
+            f'background-color: {color_code} !important; width: 150px; height: 150px; '
+            'font-size: 3rem; font-weight: bold; color: white; '
+            'text-shadow: 1px 1px 3px rgba(0,0,0,0.7);'
+        )
         self._on_click = on_click
 
         if sound_path:

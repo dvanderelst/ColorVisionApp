@@ -20,7 +20,7 @@ class ButtonGrid:
             for i, color in enumerate(colors):
                 is_correct = color == target
                 sound = correct_sound if is_correct else error_sound
-                btn = ToggleButton('', color=color, sound_path=sound,
+                btn = ToggleButton(str(i + 1), color=color, sound_path=sound,
                                    on_click=lambda i=i, correct=is_correct: self._handle_click(i, correct))
                 self._buttons.append(btn)
 

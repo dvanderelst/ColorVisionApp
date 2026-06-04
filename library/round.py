@@ -4,8 +4,9 @@ from library.button_grid import ButtonGrid
 from settings import (TICK_START_MS, TICK_STEP_MS, TICK_MIN_MS,
                       ROUND_SCORE_START, SCORE_PENALTY_TICK, SCORE_PENALTY_WRONG)
 
-TICK_SOUND      = 'resources/tick.wav'
-ROUND_END_SOUND = 'resources/round_end.wav'
+TICK_SOUND           = 'resources/tick.wav'
+ROUND_END_SOUND      = 'resources/round_end.wav'
+ROUND_END_LOST_SOUND = 'resources/round_end_lost.wav'
 
 
 def _load_b64(path):
@@ -48,6 +49,9 @@ class Round:
         reb64, reext = _load_b64(ROUND_END_SOUND)
         round_end_js = f'new Audio("data:audio/{reext};base64,{reb64}").play();'
 
+        rlb64, rlext = _load_b64(ROUND_END_LOST_SOUND)
+        round_end_lost_js = f'new Audio("data:audio/{rlext};base64,{rlb64}").play();'
+
         # mutable refs so closures defined before the UI is built can still reach elements
         refs = {}
         timer_ref = {'timer': None}
@@ -58,6 +62,8 @@ class Round:
             ui.run_javascript(stop_tick_js)
             if self._score > 0:
                 ui.run_javascript(round_end_js)
+            else:
+                ui.run_javascript(round_end_lost_js)
             if on_complete:
                 on_complete(self._score)
 

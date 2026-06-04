@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import os
 import random
 from datetime import date, datetime, timedelta
@@ -20,6 +21,10 @@ ui.add_css('''
 ''', shared=True)
 
 COLORS = ['red', 'green', 'blue', 'yellow', 'magenta', 'cyan']
+
+with open('resources/cheer.wav', 'rb') as _f:
+    _cheer_b64 = base64.b64encode(_f.read()).decode()
+CHEER_JS = f'new Audio("data:audio/wav;base64,{_cheer_b64}").play();'
 
 GOGGLE_IMAGES = {
     'red':   '/resources/red_goggles.png',
@@ -101,6 +106,7 @@ def game(difficulty: str):
         if state['round_num'] > N_ROUNDS:
             multiplier = tick_cfg['multiplier']
             final_score = round(state['total_score'] * multiplier)
+            ui.run_javascript(CHEER_JS)
             ui.navigate.to(f'/done/{final_score}/{difficulty}')
             return
         container.clear()
@@ -144,7 +150,7 @@ def done(total_score: int, difficulty: str):
 @ui.page('/dashboard')
 def dashboard():
     tz = ZoneInfo(TIMEZONE)
-    container = ui.column().classes('w-full max-w-3xl mx-auto mt-12 px-8 gap-6')
+    container = ui.column().classes('w-full max-w-5xl mx-auto mt-12 px-8 gap-6')
 
     def show_login():
         with container:
@@ -168,9 +174,11 @@ def dashboard():
 
         with container:
             ui.label('Scores').classes('text-white text-2xl font-bold')
-            with ui.row().classes('w-full items-start gap-6'):
-                date_picker = ui.date(value=today.isoformat()).props('dark')
-                table_container = ui.column().classes('flex-1')
+            with ui.row().classes('w-full items-start gap-6 flex-nowrap'):
+                date_picker = ui.date(
+                    value={'from': today.isoformat(), 'to': today.isoformat()},
+                ).props('dark range').classes('shrink-0')
+                table_container = ui.column().classes('flex-1 min-w-0')
                 with table_container:
                     ui.label('Getting data...').classes('text-gray-400')
 
@@ -178,9 +186,21 @@ def dashboard():
             raw = date_picker.value
             if not raw:
                 return
-            selected = date.fromisoformat(raw.replace('/', '-'))
-            start = datetime(selected.year, selected.month, selected.day, tzinfo=tz)
-            end = start + timedelta(days=1)
+            # `raw` is a {'from', 'to'} dict in range mode, or a plain string
+            # when only a single day has been picked.
+            if isinstance(raw, dict):
+                from_raw, to_raw = raw.get('from'), raw.get('to')
+            else:
+                from_raw = to_raw = raw
+            if not from_raw:
+                return
+            to_raw = to_raw or from_raw
+            start_date = date.fromisoformat(from_raw.replace('/', '-'))
+            end_date = date.fromisoformat(to_raw.replace('/', '-'))
+            if end_date < start_date:
+                start_date, end_date = end_date, start_date
+            start = datetime(start_date.year, start_date.month, start_date.day, tzinfo=tz)
+            end = datetime(end_date.year, end_date.month, end_date.day, tzinfo=tz) + timedelta(days=1)
             rows = await db.get_scores(start, end)
 
             table_container.clear()
@@ -194,7 +214,7 @@ def dashboard():
                         {'name': 'score',      'label': 'Score',      'field': 'score',      'align': 'left'},
                         {'name': 'max_score',  'label': 'Max',        'field': 'max_score',  'align': 'left'},
                         {'name': 'difficulty', 'label': 'Difficulty', 'field': 'difficulty', 'align': 'left'},
-                        {'name': 'time',       'label': 'Time',       'field': 'time',       'align': 'left'},
+                        {'name': 'time',       'label': 'Date / Time','field': 'time',       'align': 'left'},
                     ]
                     rows_data = [
                         {
@@ -203,11 +223,13 @@ def dashboard():
                             'score':      row[1],
                             'max_score':  row[2],
                             'difficulty': row[3].capitalize(),
-                            'time':       row[4].astimezone(tz).strftime('%H:%M'),
+                            'time':       row[4].astimezone(tz).strftime('%b %d, %H:%M'),
                         }
                         for i, row in enumerate(rows)
                     ]
                     ui.table(columns=columns, rows=rows_data).classes('w-full').props('dark flat')
+
+            ui.run_javascript('window.scrollTo(0, 0)')
 
         date_picker.on('update:modelValue', lambda: asyncio.ensure_future(refresh()))
         with client_content:
